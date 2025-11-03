@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Experimentar con Julieta</title>
+  <!-- Fuente pixel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg: #0d0f1a;           /* pared oscura laboratorio */
+      --tile1:#121528; 
+      --tile2:#101227; 
+      --panel:#1c2040;        /* paneles */
+      --accent:#9ef0ff;       /* cian luces */
+      --btn:#34d399;          /* verde botón */
+      --btn2:#60a5fa;         /* azul botón */
+      --text:#e6f3ff;
+      --shadow:#0008;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:"Press Start 2P", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow:hidden; /* sensación de juego */
+    }
+
+    /* Lienzo del juego */
+    .game {
+      position:fixed; inset:0;
+      display:grid;
+      place-items:center;
+    }
+
+    /* Fondo tipo pixel art (tiles + capa SVG) */
+    .lab-bg{
+      position:absolute; inset:0; z-index:0;
+      background:
+        
+        linear-gradient(0deg, var(--tile1) 50%, transparent 50%) 0 0/ 16px 16px,
+        linear-gradient(90deg, var(--tile2) 50%, transparent 50%) 0 0/ 16px 16px,
+        var(--bg);
+      image-rendering: pixelated;
+    }
+    .lab-overlay{
+    /* Si ya lo tenía, no hace falta repetir; pero así nos aseguramos */
+    position: absolute; inset: 0; z-index: 1;
+    pointer-events: none !important;
+
+    /* 🔥 Forzamos que gane al SVG anterior */
+    background-image: url('img/308742b41e71820c34b25f18400d14eb.gif') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+
+    /* Si el GIF se ve borroso, desactivá el pixelated */
+    image-rendering: auto !important;
+
+    /* Opcional: ajustá opacidad si lo ves muy tenue */
+    opacity: 1 !important;
+  }
+
+    /* Contenido (capas) */
+    .screen{
+      position:relative; z-index:2;
+      width:min(900px, 92vw);
+      min-height: 65vh;
+      padding: clamp(16px, 4vw, 32px);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center;
+      gap: clamp(16px, 3vw, 28px);
+    }
+
+    h1, h2, p { text-shadow: 0 4px 0 var(--shadow); }
+
+    h1{
+      font-size: clamp(22px, 4vw, 34px);
+      letter-spacing: 1px;
+      margin:0;
+    }
+    p{ font-size: clamp(12px, 2.3vw, 16px); line-height:1.6; margin:0; }
+
+    .btn{
+      display:inline-block; cursor:pointer; user-select:none;
+      padding: 14px 18px; border: 4px solid #111827; border-radius: 10px;
+      background: var(--btn); color:#06281d; text-decoration:none;
+      font-size: clamp(12px, 2.4vw, 16px);
+      box-shadow: 0 6px 0 #065f46, 0 10px 18px var(--shadow);
+      transform: translateY(0);
+      transition: transform .05s ease, box-shadow .05s ease;
+      image-rendering: pixelated;
+    }
+    .btn:hover{ transform: translateY(1px); box-shadow: 0 5px 0 #065f46, 0 10px 18px var(--shadow); }
+    .btn:active{ transform: translateY(3px); box-shadow: 0 3px 0 #065f46, 0 6px 12px var(--shadow); }
+
+    .btn-secondary{ background: var(--btn2); color:#0a1630; box-shadow:0 6px 0 #1e40af, 0 10px 18px var(--shadow); border-color:#0b1024; }
+
+    /* Personaje Julieta (SVG pixel) */
+    .julieta{
+      width: clamp(160px, 38vw, 260px);
+      image-rendering: pixelated;  
+      filter: drop-shadow(0 6px 0 var(--shadow));
+    }
+
+    /* Aviso de tamaño móvil: ocupar toda la altura */
+    @media (max-width: 640px){
+      .screen{ min-height: 70vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="game" role="application" aria-label="Juego: Experimentar con Julieta">
+    <div class="lab-bg" aria-hidden="true"></div>
+    <div class="lab-overlay" aria-hidden="true"></div>
+
+    <!-- PANTALLA 1: Bienvenida -->
+    <section class="screen" id="screen-start" aria-live="polite">
+      <h1>¡Bienvenido a <span style="color:var(--accent)">experimentar</span> con Julieta!</h1>
+      <p>Una aventura de química en estilo <em>pixel art</em>. ¿Listo para el laboratorio?</p>
+      <a class="btn" id="btn-start" role="button" aria-controls="screen-intro" aria-label="Empezar el juego">EMPEZAR</a>
+    </section>
+
+    <!-- PANTALLA 2: Presentación de Julieta -->
+    <section class="screen" id="screen-intro" style="display: none;" hidden>
+
+      <h2>¡Hola! Soy Julieta, científica del CONICET</h2>
+      <p>y necesito tu ayuda para hacer un experimento.</p>
+      <a class="btn btn-secondary" id="btn-go-quiz" role="button" aria-label="Ir al quiz">EMPEZAR</a>
+    </section>
+  </div>
+
+  <!-- jQuery opcional (para quienes prefieren) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <script src="questions.js"></script>
+
+  <script>
+
+    $(function(){
+
+  // ---------- CONFIGURACIÓN ----------
+  const preguntas = QUIZ.getQuestions({ limite: 5, mezclar: true }); // elige 5 al azar
+  let indice = 0;
+  let puntaje = 0;
+
+  // ---------- CREAR PANTALLA QUIZ ----------
+  const $quiz = $(`
+    <section class="screen" id="screen-quiz" hidden>
+      <h2 id="quiz-titulo"></h2>
+      <div id="quiz-opciones" class="mt-3"></div>
+      <p id="quiz-explicacion" class="mt-2"></p>
+      <a class="btn" id="quiz-siguiente" hidden>SIGUIENTE</a>
+    </section>
+  `);
+
+  $(".game").append($quiz);
+
+  // ---------- FUNCIÓN PARA MOSTRAR UNA PREGUNTA ----------
+  function mostrarPregunta() {
+    const q = preguntas[indice];
+    $("#quiz-titulo").text(`Pregunta ${indice+1}/${preguntas.length}: ${q.enunciado}`);
+    $("#quiz-opciones").empty();
+    $("#quiz-explicacion").text("");
+    $("#quiz-siguiente").attr("hidden", true).hide();
+
+    q.opciones.forEach(op => {
+      const $btn = $(`<a class="btn btn-secondary" style="display:block;margin:8px 0">${op.key}) ${op.texto}</a>`);
+      $btn.on("click", function(){
+        const correcta = op.key === q.correcta;
+        if (correcta) {
+          $(this).css("background","#22c55e").text(`${op.key}) ${op.texto} ✅`);
+          puntaje++;
+        } else {
+          $(this).css("background","#ef4444").text(`${op.key}) ${op.texto} ❌`);
+        }
+        $("#quiz-opciones a").css("pointer-events","none"); // bloquear clicks
+        if (q.explicacion) $("#quiz-explicacion").text(q.explicacion);
+        $("#quiz-siguiente").removeAttr("hidden").show();
+      });
+      $("#quiz-opciones").append($btn);
+    });
+  }
+
+  // ---------- SIGUIENTE ----------
+  $("#quiz-siguiente").on("click", function(){
+    indice++;
+    if (indice < preguntas.length) {
+      mostrarPregunta();
+    } else {
+      mostrarResultado();
+    }
+  });
+
+  // ---------- RESULTADO FINAL ----------
+  function mostrarResultado() {
+    const total = preguntas.length;
+    const percent = Math.round((puntaje / total) * 100);
+    $quiz.html(`
+      <h2>¡Experimento terminado!</h2>
+      <p>Tu puntaje: ${puntaje} de ${total} (${percent}%)</p>
+      <a class="btn" id="btn-reintentar">JUGAR DE NUEVO</a>
+    `);
+    $("#btn-reintentar").on("click", () => location.reload());
+  }
+
+  // ---------- ACTIVAR AL TOCAR “EMPEZAR” ----------
+  $("#btn-go-quiz").off("click").on("click", function(){
+    $("#screen-start, #screen-intro").attr("hidden", true).hide();
+    $("#screen-quiz").removeAttr("hidden").show();
+    indice = 0; puntaje = 0;
+    mostrarPregunta();
+  });
+
+});
+    // Asegurar que el fondo no bloquee clics
+    document.querySelectorAll('.lab-bg, .lab-overlay').forEach(el=>el.style.pointerEvents='none');
+
+    // Fallback en JS puro por si falla el CDN de jQuery
+    (function(){
+      const q = (sel)=>document.querySelector(sel);
+      const startBtn = q('#btn-start');
+      const quizBtn  = q('#btn-go-quiz');
+      const scrStart = q('#screen-start');
+      const scrIntro = q('#screen-intro');
+      function showIntro(){ if(scrStart) scrStart.hidden = true; if(scrIntro) scrIntro.hidden = false; }
+      function goQuiz(){ 
+        // alert('¡Perfecto! En el próximo paso cargamos el quiz de química.'); 
+    }
+      if(startBtn) startBtn.addEventListener('click', showIntro);
+      if(quizBtn)  quizBtn.addEventListener('click', goQuiz);
+    })();
+
+    // Si jQuery cargó, también lo conectamos (no hace daño, se duplica pero es idempotente)
+    if (window.jQuery){
+      $(function(){
+        $('#btn-start').on('click', function(){ 
+            $('#screen-start').attr('hidden', true); 
+            $('#screen-start').hide();
+            $('#screen-intro').removeAttr('hidden'); 
+            $('#screen-intro').show();
+            console.log("empezamos");
+        });
+        $('#btn-go-quiz').on('click', function(){ 
+            // alert('¡Perfecto! En el próximo paso cargamos el quiz de química.'); 
+        });
+      });
+    }
+
+    // Nitidez pixel art en HiDPI
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('img, canvas').forEach(el => { el.style.imageRendering = 'pixelated'; });
+    });
+  </script>
+</body>
+</html>
